@@ -13,6 +13,152 @@
       .sys { color: #666; font-size: 12px; }
       .assistant { background: #f7f7f8; padding: 8px 12px; border-radius: 8px; margin: 6px 0; }
       .user { background: #e6f2ff; padding: 8px 12px; border-radius: 8px; margin: 6px 0; }
+      
+      /* Weather Card Styling */
+      .weather-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin: 12px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+      
+      .weather-card .weather-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .weather-card .weather-location {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        opacity: 0.9;
+      }
+      
+      .weather-card .weather-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      
+      .weather-card .weather-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+      }
+      
+      .weather-card .weather-item .label {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+      }
+      
+      .weather-card .weather-item .value {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      
+      .weather-card .weather-time {
+        text-align: center;
+        margin-top: 12px;
+        font-size: 12px;
+        opacity: 0.7;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        padding-top: 8px;
+      }
+      
+      /* Research Summary Card Styling */
+      .research-card {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin: 12px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+      
+      .research-card .research-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .research-card .research-content {
+        font-size: 14px;
+        line-height: 1.6;
+        opacity: 0.95;
+      }
+      
+      /* Technical Writer Card Styling */
+      .technical-card {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin: 12px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+      
+      .technical-card .technical-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .technical-card .technical-content {
+        font-size: 14px;
+        line-height: 1.6;
+        opacity: 0.95;
+      }
+      
+      /* Agent Attribution Cards */
+      .agent-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px;
+        border-radius: 12px;
+        margin: 8px 0;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+      
+      .agent-card .agent-header {
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .agent-card .agent-content {
+        font-size: 14px;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
     </style>
   </head>
   <body>
@@ -32,7 +178,12 @@
         const div = document.createElement('div');
         div.className = role;
         if (label) {
-          const h = document.createElement('div'); h.className='sys'; h.textContent=label; div.prepend(h);
+          const h = document.createElement('div'); 
+          h.className='sys'; 
+          h.textContent=label; 
+          h.style.fontWeight = 'bold';
+          h.style.color = '#0066cc';
+          div.prepend(h);
         }
         div.textContent = text;
         logEl.appendChild(div);
@@ -66,6 +217,7 @@
             const type = evt.slice(7).trim();
             try {
               const payload = JSON.parse(dataLine.slice(6));
+              console.log('Received event:', type, payload); // Debug logging
               if (type === 'TEXT_MESSAGE_START') {
                 // start a new assistant block with optional agent_name label
                 current = '';
@@ -80,13 +232,69 @@
 
               else if (type === 'WEATHER_CARD') {
                 const card = document.createElement('div');
-                card.className = 'assistant';
+                card.className = 'weather-card';
                 const d = payload.data || {};
-                card.innerHTML = `<div class="sys">🌤 Weather</div>
-                  <div><b>${d.location || ''}</b></div>
-                  <div>Temp: ${d.temperature ?? '?'}°C</div>
-                  <div>Wind: ${d.windspeed ?? '?'} km/h</div>
-                  <div>Time: ${d.time || ''}</div>`;
+                
+                // Format temperature with proper units
+                const temp = d.temperature !== null && d.temperature !== undefined ? 
+                  `${Math.round(d.temperature)}°C` : 'N/A';
+                
+                // Format wind speed
+                const wind = d.windspeed !== null && d.windspeed !== undefined ? 
+                  `${Math.round(d.windspeed)} km/h` : 'N/A';
+                
+                // Format time
+                const time = d.time ? new Date(d.time).toLocaleString() : 'N/A';
+                
+                card.innerHTML = `
+                  <div class="weather-header">
+                    🌤️ Weather Report
+                  </div>
+                  <div class="weather-location">
+                    📍 ${d.location || 'Unknown Location'}
+                  </div>
+                  <div class="weather-details">
+                    <div class="weather-item">
+                      <div class="label">Temperature</div>
+                      <div class="value">${temp}</div>
+                    </div>
+                    <div class="weather-item">
+                      <div class="label">Wind Speed</div>
+                      <div class="value">${wind}</div>
+                    </div>
+                  </div>
+                  <div class="weather-time">
+                    Last updated: ${time}
+                  </div>
+                `;
+                logEl.appendChild(card);
+              } else if (type === 'RESEARCH_CARD') {
+                const card = document.createElement('div');
+                card.className = 'research-card';
+                const d = payload.data || {};
+                
+                card.innerHTML = `
+                  <div class="research-header">
+                    🔍 Research Summary
+                  </div>
+                  <div class="research-content">
+                    ${d.content || 'No research summary available'}
+                  </div>
+                `;
+                logEl.appendChild(card);
+              } else if (type === 'TECHNICAL_CARD') {
+                const card = document.createElement('div');
+                card.className = 'technical-card';
+                const d = payload.data || {};
+                
+                card.innerHTML = `
+                  <div class="technical-header">
+                    ✍️ Technical Analysis
+                  </div>
+                  <div class="technical-content">
+                    ${d.content || 'No technical analysis available'}
+                  </div>
+                `;
                 logEl.appendChild(card);
               } else if (type === 'TOOL_CALL') {
                 append('assistant', `🔧 Calling ${payload.tool}(${JSON.stringify(payload.args)})`);

@@ -6,8 +6,12 @@ os.environ["LITELLM_LOG"] = "error"
 os.environ["LITELLM_DISABLE_LOGGING"] = "true"
 os.environ["LITELLM_LOG_LEVEL"] = "ERROR"
 os.environ["LITELLM_DISABLE_LOGGING_WORKER"] = "true"
+os.environ["LITELLM_DISABLE_STREAMING_LOGGING"] = "true"
+os.environ["LITELLM_TURN_OFF_MESSAGE_LOGGING"] = "true"
+os.environ["LITELLM_DISABLE_CACHE"] = "true"
+os.environ["LITELLM_DISABLE_TOKEN_COUNTER"] = "true"
 
-from google.adk.agents import LlmAgent, SequentialAgent
+from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent, LoopAgent
 from google.adk.models.lite_llm import LiteLlm
 import litellm
 
@@ -15,6 +19,10 @@ import litellm
 litellm.disable_streaming_logging = True
 litellm.turn_off_message_logging = True
 litellm.log_level = "ERROR"
+litellm.disable_cache = True
+litellm.disable_token_counter = True
+litellm.disable_end_user_cost_tracking = True
+litellm.store_audit_logs = False
 
 # Model config via LiteLLM Proxy (OpenAI-compatible providers)
 LITELLM_MODEL = os.getenv("LITELLM_MODEL", "anthropic/claude-3-5-sonnet-20241022")
@@ -50,7 +58,7 @@ technical_writer = LlmAgent(
     name="technical_writer",
     model=_llm(),
     instruction=(
-        "You are a crisp technical writer. Turn the research summary into an executive summary "
+        "You are a crisp technical writer. Turn the 'research_summary' key in the state into an executive summary "
         "and 3–5 actionable insights for engineering managers. Keep it precise.\n\n"
         "**Research Summary to Process:**\nPlease analyze the research provided by the previous agent and create an executive summary with actionable insights."
     ),
@@ -79,20 +87,41 @@ technical_writer_collab = LlmAgent(
     name="technical_writer_collab",
     model=_llm(),
     instruction=(
-        "You are a crisp technical writer. Turn structured notes into an executive summary "
-        "and 3–5 actionable insights for engineering managers. Keep it precise."
+        "You are a crisp technical writer. Turn the 'collab_research_summary' key in the state into an executive summary "
+        "and 3–5 actionable insights for engineering managers. Keep it precise.\n\n"
+        "Please analyze the research provided by the web_researcher_collab agent and create an executive summary with actionable insights."
     ),
     output_key="collab_final_output"
 )
 
-# Orchestrator v2 — LLM collaboration (delegation, merging)
-# LlmAgent can coordinate sub_agents; the model decides routing/merging.
-collab_orchestrator = LlmAgent(
+# Orchestrator v2 — Parallel collaboration (concurrent execution, merging)
+# ParallelAgent executes sub-agents concurrently and merges their results
+collab_orchestrator = ParallelAgent(
     name="collab_orchestrator",
+    sub_agents=[web_researcher_collab, technical_writer_collab],
+)
+
+# Router Agent - Intelligent query routing
+router_agent = LlmAgent(
+    name="router_agent",
     model=_llm(),
     instruction=(
-        "You are a collaboration orchestrator. Delegate work to sub agents when useful, "
-        "merge their responses, remove duplicates, and deliver a single, clean answer."
+        "You are a query router. Analyze the user's question and respond with ONLY one of these four options:\n\n"
+        "1. If the user asks about WEATHER in any city, respond: WEATHER_ROUTE\n"
+        "2. If the user asks to SUMMARIZE, RESEARCH, or ANALYZE URLs/topics, respond: RESEARCH_ROUTE\n"
+        "3. If the user asks for COMPARISON, ANALYSIS, or wants MULTIPLE perspectives, respond: COLLABORATION_ROUTE\n"
+        "4. For all other questions, respond: GENERAL_ROUTE\n\n"
+        "Examples:\n"
+        "- 'What's the weather in New York?' → WEATHER_ROUTE\n"
+        "- 'Tell me about the weather in London' → WEATHER_ROUTE\n"
+        "- 'Weather in Tokyo' → WEATHER_ROUTE\n"
+        "- 'Summarize https://ai.google.dev' → RESEARCH_ROUTE\n"
+        "- 'Research AI trends' → RESEARCH_ROUTE\n"
+        "- 'Compare different AI models' → COLLABORATION_ROUTE\n"
+        "- 'Analyze pros and cons of...' → COLLABORATION_ROUTE\n"
+        "- 'Hello, how are you?' → GENERAL_ROUTE\n"
+        "- 'What can you help with?' → GENERAL_ROUTE\n\n"
+        "Respond with ONLY the route type, nothing else."
     ),
-    sub_agents=[web_researcher_collab, technical_writer_collab],
+    output_key="routing_decision"
 )

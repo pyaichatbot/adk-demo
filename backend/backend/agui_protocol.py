@@ -16,6 +16,8 @@ class EventType:
     TOOL_CALL = "TOOL_CALL"
     TOOL_RESULT = "TOOL_RESULT"
     WEATHER_CARD = "WEATHER_CARD"
+    RESEARCH_CARD = "RESEARCH_CARD"
+    TECHNICAL_CARD = "TECHNICAL_CARD"
 
 @dataclass
 class RunAgentInput:
