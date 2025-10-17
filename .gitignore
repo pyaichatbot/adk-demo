@@ -181,3 +181,10 @@ temp/
 # Backup files
 *.bak
 *.backup
+
+.pyc
+backend/backend/__pycache__/__init__.cpython-311.pyc
+backend/backend/__pycache__/agents.cpython-311.pyc
+backend/backend/__pycache__/agui_protocol.cpython-311.pyc
+backend/backend/__pycache__/main.cpython-311.pyc
+backend/backend/__pycache__/orchestrator.cpython-311.pyc
