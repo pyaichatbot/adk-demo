@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  # litellm:
+  #   image: ghcr.io/berriai/litellm:main
+  #   container_name: litellm
+  #   ports: ["4000:4000"]
+  #   environment:
+  #     - LITELLM_LOG=info
+  #   volumes:
+  #     - ./litellm/config.yaml:/app/config.yaml:ro
+  #   command: ["--config", "/app/config.yaml"]
+  backend:
+    build: ./backend
+    container_name: adk-backend
+    ports: ["8080:8080"]
+    env_file: [.env]
+    environment:
+      - LITELLM_LOG=error
+      - LITELLM_DISABLE_LOGGING=true
+    volumes:
+      - ./backend:/app
+  frontend:
+    build: ./frontend
+    container_name: agui-frontend
+    ports: ["5173:5173"]
+    depends_on: [backend]

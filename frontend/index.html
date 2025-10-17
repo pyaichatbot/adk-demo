@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AG‑UI Demo (Static)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; display: grid; grid-template-rows: 1fr auto; height: 100vh; }
+      #log { padding: 16px; overflow: auto; white-space: pre-wrap; }
+      #composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #eee; }
+      input[type=text] { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+      button { padding: 10px 14px; border-radius: 8px; border: 0; background: black; color: white; }
+      .sys { color: #666; font-size: 12px; }
+      .assistant { background: #f7f7f8; padding: 8px 12px; border-radius: 8px; margin: 6px 0; }
+      .user { background: #e6f2ff; padding: 8px 12px; border-radius: 8px; margin: 6px 0; }
+    </style>
+  </head>
+  <body>
+    <div id="log">
+      <div class="sys">AG‑UI SSE → http://localhost:8080/api/agui/run</div>
+    </div>
+    <div id="composer">
+      <input id="prompt" type="text" placeholder="Ask something… e.g., Summarize https://ai.google.dev and give 3 insights" />
+      <button id="send">Send</button>
+    </div>
+    <script>
+      const logEl = document.getElementById('log');
+      const input = document.getElementById('prompt');
+      const send  = document.getElementById('send');
+
+      function append(role, text, label) {
+        const div = document.createElement('div');
+        div.className = role;
+        if (label) {
+          const h = document.createElement('div'); h.className='sys'; h.textContent=label; div.prepend(h);
+        }
+        div.textContent = text;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      async function run(prompt) {
+        append('user', prompt);
+        const res = await fetch('http://localhost:8080/api/agui/run', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'Accept':'text/event-stream'},
+          body: JSON.stringify({ prompt })
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let current = '';
+        append('assistant', '');
+        const last = logEl.lastChild;
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, {stream:true});
+          const parts = buf.split('\n\n');
+          buf = parts.pop();
+          for (const p of parts) {
+            const lines = p.split('\n');
+            const evt = lines.find(l=>l.startsWith('event: '));
+            const dataLine = lines.find(l=>l.startsWith('data: '));
+            if (!evt || !dataLine) continue;
+            const type = evt.slice(7).trim();
+            try {
+              const payload = JSON.parse(dataLine.slice(6));
+              if (type === 'TEXT_MESSAGE_START') {
+                // start a new assistant block with optional agent_name label
+                current = '';
+                append('assistant', '', payload.agent_name || '');
+              } else if (type === 'TEXT_MESSAGE_CONTENT') {
+                current += payload.delta;
+                const lastBlock = logEl.lastChild;
+                // lastBlock contains a label div + text content
+                const textNode = Array.from(lastBlock.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
+                if (textNode) { textNode.textContent = current; } else { lastBlock.append(document.createTextNode(current)); }
+              }
+
+              else if (type === 'WEATHER_CARD') {
+                const card = document.createElement('div');
+                card.className = 'assistant';
+                const d = payload.data || {};
+                card.innerHTML = `<div class="sys">🌤 Weather</div>
+                  <div><b>${d.location || ''}</b></div>
+                  <div>Temp: ${d.temperature ?? '?'}°C</div>
+                  <div>Wind: ${d.windspeed ?? '?'} km/h</div>
+                  <div>Time: ${d.time || ''}</div>`;
+                logEl.appendChild(card);
+              } else if (type === 'TOOL_CALL') {
+                append('assistant', `🔧 Calling ${payload.tool}(${JSON.stringify(payload.args)})`);
+              } else if (type === 'TOOL_RESULT') {
+                if (payload.ok) append('assistant', `✅ ${payload.tool} result ready.`);
+                else append('assistant', `❌ ${payload.tool} error: ${payload.error}`);
+              }
+
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
+      send.onclick = () => run(input.value);
+      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ run(input.value); } });
+    </script>
+  </body>
+</html>
